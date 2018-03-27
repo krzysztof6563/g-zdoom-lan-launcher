@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>744</width>
-    <height>659</height>
+    <height>664</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -61,14 +61,14 @@
     <item row="2" column="1">
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
-       <widget class="QPushButton" name="pushButton_2">
+       <widget class="QPushButton" name="killButton">
         <property name="text">
          <string>Zabij proces</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="runButton">
         <property name="text">
          <string>Zacznij grę</string>
         </property>
@@ -145,11 +145,11 @@
          </size>
         </property>
         <property name="title">
-         <string>IWADy</string>
+         <string>IWAD</string>
         </property>
         <layout class="QGridLayout" name="gridLayout">
          <item row="0" column="1">
-          <widget class="QListWidget" name="listWidget">
+          <widget class="QListWidget" name="IWADListWidget">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -162,62 +162,30 @@
              <height>16777215</height>
             </size>
            </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QGroupBox" name="PWADgroupBox">
+           <property name="title">
+            <string>PWAD</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_7"/>
           </widget>
          </item>
         </layout>
        </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox_7">
-        <property name="title">
-         <string>PWADy</string>
+       <widget class="QPushButton" name="refreshButton">
+        <property name="text">
+         <string>Odśwież</string>
         </property>
-        <layout class="QGridLayout" name="gridLayout_7">
-         <item row="0" column="0">
-          <widget class="QListWidget" name="listWidgetPWAD">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>153</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="defaultDropAction">
-            <enum>Qt::IgnoreAction</enum>
-           </property>
-           <property name="alternatingRowColors">
-            <bool>true</bool>
-           </property>
-           <property name="selectionMode">
-            <enum>QAbstractItemView::MultiSelection</enum>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QPushButton" name="pushButton_3">
-           <property name="text">
-            <string>Wyczyść</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
        </widget>
       </item>
       <item>
        <widget class="QGroupBox" name="groupBox_3">
         <property name="title">
-         <string>Adres IP:</string>
+         <string>Adresy IP:</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_4">
          <item row="0" column="0">
@@ -428,35 +396,6 @@
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_7"/>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_8">
-        <property name="title">
-         <string>Typ silnika gry:</string>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <widget class="QRadioButton" name="radioZD">
-           <property name="text">
-            <string>ZDoom</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="radioGZD">
-           <property name="text">
-            <string>GZDoom</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
        <widget class="QGroupBox" name="groupBox_6">
         <property name="title">
          <string>Dodatkowe polecenia:</string>
@@ -485,8 +424,10 @@
     <property name="title">
      <string>Plik</string>
     </property>
-    <addaction name="actionUrchom"/>
-    <addaction name="actionWyjd"/>
+    <addaction name="actionRun"/>
+    <addaction name="actionSettings"/>
+    <addaction name="actionRefresh"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuInformacje">
     <property name="title">
@@ -498,7 +439,7 @@
    <addaction name="menuInformacje"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <action name="actionWyjd">
+  <action name="actionExit">
    <property name="text">
     <string>Wyjdź</string>
    </property>
@@ -508,9 +449,19 @@
     <string>Autor</string>
    </property>
   </action>
-  <action name="actionUrchom">
+  <action name="actionRun">
    <property name="text">
     <string>Uruchom</string>
+   </property>
+  </action>
+  <action name="actionRefresh">
+   <property name="text">
+    <string>Odśwież</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="text">
+    <string>Ustawienia</string>
    </property>
   </action>
  </widget>

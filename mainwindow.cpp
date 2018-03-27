@@ -12,33 +12,27 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->radioHard->setChecked(true);
     ui->radioClient->setChecked(true);
     ui->groupBox_3->setHidden(true);
-    setWADS();
 
-    connect(ui->actionUrchom, SIGNAL(triggered()), this, SLOT(on_pushButton_clicked()));
+    PWADvbox = nullptr;
 
-    int i = 0;
-
-    foreach (const QHostAddress &address, QNetworkInterface::allAddresses()) {
-        if (address.protocol() == QAbstractSocket::IPv4Protocol && address != QHostAddress(QHostAddress::LocalHost)){
-            QString ip = address.toString();
-            if (ip.toStdString().substr(0,3) != "169"){
-                if (i==0){
-                    ui->labelIPHost->setText(address.toString());
-                    i++;
-                }else{
-                    ui->labelIPHost->setText(ui->labelIPHost->text()+"<br>"+address.toString());
-                }
-            }
-        }
-
+    config = new Config();
+    if (!config->loadConfig()){
+        showError(tr("Błąd ładowania pliku."), tr("Nie udało się odczytać pliku konfiguracyjnego."));
     }
 
-    this->adjustSize();
+    initWADs();
 
+    connect(ui->actionRun, SIGNAL(triggered()), this, SLOT(on_runButton_clicked()));
+    connect(ui->actionRefresh, SIGNAL(triggered()), this, SLOT(on_refreshButton_clicked()));
+
+    setIPAdresses();
+
+    this->adjustSize();
 }
 
 MainWindow::~MainWindow()
 {
+    delete config;
     delete ui;
 }
 
@@ -58,15 +52,15 @@ void MainWindow::on_radioClient_clicked()
     this->adjustSize();
 }
 
-void MainWindow::setWADS()
+void MainWindow::getWADs()
 {
     QStringList list;
-    QDir *currentDir = new QDir(".");
+    QDir *currentDir = new QDir(config->getGameLocation());
     list = currentDir->entryList();
     list = list.filter(QRegExp("(.wad|.WAD)"));
     std::ifstream in;
     for (auto i: list){
-        in.open(i.toStdString());
+        in.open(config->getGameLocation().toStdString()+i.toStdString());
         char buffer[4];
         in.read(buffer, 4);
         in.close();
@@ -75,26 +69,181 @@ void MainWindow::setWADS()
             str += i;
         }
         if (str == "IWAD"){
-            ui->listWidget->addItem(i);
             IWADsVector.push_back(i);
         } else {
             if (str == "PWAD"){
-                ui->listWidgetPWAD->addItem(i);
                 PWADsVector.push_back(i);
+            }
+        }
+    }
+    delete currentDir;
+}
+
+void MainWindow::updateError()
+{
+    QByteArray data = myProcess->readAllStandardError();
+    ui->textEdit->append("<span style='color: red;'>'"+QString(data)+"</span>");
+}
+
+void MainWindow::updateText()
+{
+    QByteArray data = myProcess->readAllStandardOutput();
+    ui->textEdit->append(QString(data));
+}
+
+void MainWindow::processFinished()
+{
+    ui->textEdit->append(tr("<br>####### Zakończono proces #######<br>"));
+}
+
+void MainWindow::cwDestroyed()
+{
+    delete cw;
+}
+
+void MainWindow::setIPAdresses()
+{
+    int i = 0;
+
+    foreach (const QHostAddress &address, QNetworkInterface::allAddresses()) {
+        if (address.protocol() == QAbstractSocket::IPv4Protocol && address != QHostAddress(QHostAddress::LocalHost)){
+            QString ip = address.toString();
+            if (ip.toStdString().substr(0,3) != "169"){
+                if (i==0){
+                    ui->labelIPHost->setText(address.toString());
+                    i++;
+                }else{
+                    ui->labelIPHost->setText(ui->labelIPHost->text()+"<br>"+address.toString());
+                }
             }
         }
 
     }
-    ui->listWidget->setCurrentRow(0);
 }
 
-void MainWindow::on_pushButton_clicked()
+void MainWindow::setPWADs()
+{
+    if (PWADvbox != nullptr) {
+        delete PWADvbox;
+    }
+    PWADvbox = new QVBoxLayout;
+    for (auto i : PWADCheckBoxVector) {
+        delete i;
+    }
+    PWADCheckBoxVector.clear();
+    for (auto i : PWADsVector) {
+        PWADCheckBoxVector.push_back(new QCheckBox(i));
+        PWADvbox->addWidget(PWADCheckBoxVector.back());
+    }
+    delete ui->PWADgroupBox->layout();
+    ui->PWADgroupBox->setLayout(PWADvbox);
+
+}
+
+void MainWindow::setIWADs()
+{
+    ui->IWADListWidget->clear();
+    for (auto i : IWADsVector) {
+        ui->IWADListWidget->addItem(i);
+    }
+}
+
+void MainWindow::initWADs()
+{
+    clearWADs();
+    getWADs();
+    setIWADs();
+    setPWADs();
+}
+
+void MainWindow::clearWADs() {
+    PWADsVector.clear();
+    IWADsVector.clear();
+}
+
+void MainWindow::runGame()
 {
     QString list;
-    if(ui->radioServer->isChecked()){
-        list += "-iwad ";
-        int i = ui->listWidget->currentRow();
-        list += IWADsVector[i];
+    list += "-iwad ";
+    int i = ui->IWADListWidget->currentRow();
+    if (i == -1) {
+        run = false;
+        showError("Należy wybrać IWAD.");
+        return;
+    }
+    list += config->getGameLocation()+IWADsVector[i];
+    if (ui->radioServer->isChecked()){
+        setServerOptions(list);
+    } else {
+        if (!setClientOptions(list)){
+            return;
+        }
+    }
+    QString program;
+    setCommonOptions(list, program);
+    if (run && myProcess->state() == QProcess::NotRunning){
+        ui->textEdit->clear();
+        ui->textEdit->append("<b>"+program+"<br></b>");
+        myProcess->setProcessChannelMode ( QProcess::MergedChannels );
+        connect(myProcess, SIGNAL(readyReadStandardError()), this, SLOT(updateError()));
+        connect(myProcess, SIGNAL(readyReadStandardOutput()), this, SLOT(updateText()));
+        connect(myProcess, SIGNAL(finished(int)), this, SLOT(processFinished()));
+        myProcess->start(program);
+    }
+}
+
+void MainWindow::showError(QString title, QString message)
+{
+    QMessageBox msgBox(QMessageBox::Warning, title, message, QMessageBox::Ok, this);
+    msgBox.exec();
+}
+
+void MainWindow::showError(QString message)
+{
+     QMessageBox msgBox(QMessageBox::Warning, "Doom launcher", message, QMessageBox::Ok, this);
+    msgBox.exec();
+}
+
+void MainWindow::setDOOMOptions()
+{
+    ui->groupBox_4->setHidden(false);
+    ui->labelEp->setText(tr("Epizod:"));
+    ui->labelMap->setText(tr("Mapa:"));
+    ui->labelEp->setHidden(false);
+    ui->labelMap->setHidden(false);
+    ui->spinBoxEp->setHidden(false);
+    ui->spinBoxMap->setHidden(false);
+    ui->spinBoxEp->setMaximum(4);
+}
+
+void MainWindow::setDOOM2Options()
+{
+    ui->groupBox_4->setHidden(false);
+    ui->labelEp->setText(tr("Mapa:"));
+    ui->labelMap->setText(tr("Mapa:"));
+    ui->labelEp->setHidden(false);
+    ui->labelMap->setHidden(true);
+    ui->spinBoxEp->setHidden(false);
+    ui->spinBoxMap->setHidden(true);
+    ui->spinBoxEp->setMaximum(32);
+}
+
+bool MainWindow::setClientOptions(QString &list)
+{
+    if (ui->lineEditIP->text().isEmpty()){
+        run = false;
+        showError("Należy podać adres IP serwera.");
+        return false;
+    } else {
+        list += " -join ";
+        list += ui->lineEditIP->text();
+        run = true;
+    }
+    return true;
+}
+
+void MainWindow::setServerOptions(QString &list)
+{
         list += " -host ";
         list += ui->spinBoxPlayers->cleanText();
         if (ui->radioDm->isChecked()){
@@ -124,75 +273,34 @@ void MainWindow::on_pushButton_clicked()
         list += " ";
         list += ui->spinBoxMap->cleanText();
         run = true;
+}
+
+void MainWindow::setCommonOptions(QString &list, QString &program)
+{
+    if (config->getEngineLocation().length() == 0) {
+        run = false;
+        showError("Nie ustawiono ścieżki do silnika gry.");
+        return;
     } else {
-        if (ui->radioClient->isChecked()){
-            if (ui->lineEditIP->text().isEmpty()){
-                run = false;
-                ui->textEdit->append("<h3>Należy podać adres IP serwera.</h3>");
-            } else {
-                list += "-iwad ";
-                int i = ui->listWidget->currentRow();
-                list += IWADsVector[i];
-                list += " -join ";
-                list += ui->lineEditIP->text();
-                run = true;
+        program = config->getEngineLocation()+" -stdout ";
+    }
+
+    program += list;
+
+    if (ui->checkBoxBD->isChecked()){
+        program += " -file "+config->getBrutalDoomLocation()+" ";
+    }
+    for (uint i=0; i<PWADsVector.size(); i++) {
+        if (PWADCheckBoxVector[i]->checkState() == Qt::Checked){
+            if (!program.contains("-file")){
+                program += " -file ";
             }
+            program += " "+config->getGameLocation()+PWADsVector[i];
         }
     }
-    if (run && myProcess->state() == QProcess::NotRunning){
-        ui->textEdit->clear();
-        QString program;
-        if (ui->radioGZD->isChecked()){
-            program = "gzdoom -stdout ";
-        } else {
-            program = "zdoom -stdout ";
-        }
-
-        if (ui->checkBoxBD->isChecked()){
-            program += " -file brutal.pk3 ";
-        }
-        program += list;
-        QList<QListWidgetItem*> PWADList = ui->listWidgetPWAD->selectedItems();
-
-        if (ui->listWidgetPWAD->currentRow() != -1){
-            program += " -file ";
-            for (auto i: PWADList){
-                program += i->text()+" ";
-            }
-        }
-        if (ui->lineEditArgs->text() != ""){
-            program += " "+ui->lineEditArgs->text();
-        }
-
-        ui->textEdit->append("<b>"+program+"<br></b>");
-        myProcess->setProcessChannelMode ( QProcess::MergedChannels );
-        connect(myProcess, SIGNAL(readyReadStandardError()), this, SLOT(updateError()));
-        connect(myProcess, SIGNAL(readyReadStandardOutput()), this, SLOT(updateText()));
-        connect(myProcess, SIGNAL(finished(int)), this, SLOT(processFinished()));
-        myProcess->start(program);
+    if (ui->lineEditArgs->text() != ""){
+        program += " "+ui->lineEditArgs->text();
     }
-}
-
-void MainWindow::updateError()
-{
-    QByteArray data = myProcess->readAllStandardError();
-    ui->textEdit->append("<span style='color: red;'>'"+QString(data)+"</span>");
-}
-
-void MainWindow::updateText()
-{
-    QByteArray data = myProcess->readAllStandardOutput();
-    ui->textEdit->append(QString(data));
-}
-
-void MainWindow::processFinished()
-{
-    ui->textEdit->append(tr("<br>####### Zakończono proces #######<br>"));
-}
-
-void MainWindow::on_actionWyjd_triggered()
-{
-    this->close();
 }
 
 void MainWindow::on_actionAutor_triggered()
@@ -203,40 +311,57 @@ void MainWindow::on_actionAutor_triggered()
     msgBox.exec();
 }
 
-void MainWindow::on_pushButton_2_clicked()
+void MainWindow::on_actionRun_triggered()
+{
+    runGame();
+}
+
+void MainWindow::on_runButton_clicked()
+{
+    runGame();
+}
+
+void MainWindow::on_killButton_clicked()
 {
     myProcess->close();
 }
 
-void MainWindow::on_listWidget_currentRowChanged(int currentRow)
+void MainWindow::on_actionExit_triggered()
 {
-    if (IWADsVector[currentRow] == "doom.wad" || IWADsVector[currentRow] == "heretic.wad"  ){
-        ui->groupBox_4->setHidden(false);
-        ui->labelEp->setText(tr("Epizod:"));
-        ui->labelMap->setText(tr("Mapa:"));
-        ui->labelEp->setHidden(false);
-        ui->labelMap->setHidden(false);
-        ui->spinBoxEp->setHidden(false);
-        ui->spinBoxMap->setHidden(false);
-        ui->spinBoxEp->setMaximum(4);
+    this->close();
+}
+
+void MainWindow::on_refreshButton_clicked()
+{
+    initWADs();
+}
+
+void MainWindow::on_IWADListWidget_currentRowChanged(int currentRow)
+{
+    if (IWADsVector[currentRow] == "doom.wad" ||
+        IWADsVector[currentRow] == "heretic.wad"  ){
+            setDOOMOptions();
     } else {
-        if (IWADsVector[currentRow] == "doom2.wad" || IWADsVector[currentRow] == "plutonia.wad" || IWADsVector[currentRow] == "tnt.wad" || IWADsVector[currentRow] == "hexen.wad" || IWADsVector[currentRow] == "strife1.wad"  || IWADsVector[currentRow] == "freedoom1.wad"   || IWADsVector[currentRow] == "freedoom2.wad"  || IWADsVector[currentRow] == "freedm.wad" ){
-            ui->groupBox_4->setHidden(false);
-            ui->labelEp->setText(tr("Mapa:"));
-            ui->labelMap->setText(tr("Mapa:"));
-            ui->labelEp->setHidden(false);
-            ui->labelMap->setHidden(true);
-            ui->spinBoxEp->setHidden(false);
-            ui->spinBoxMap->setHidden(true);
-            ui->spinBoxEp->setMaximum(32);
+        if (IWADsVector[currentRow] == "doom2.wad" ||
+            IWADsVector[currentRow] == "plutonia.wad" ||
+            IWADsVector[currentRow] == "tnt.wad" ||
+            IWADsVector[currentRow] == "hexen.wad" ||
+            IWADsVector[currentRow] == "strife1.wad"  ||
+            IWADsVector[currentRow] == "freedoom1.wad"   ||
+            IWADsVector[currentRow] == "freedoom2.wad"  ||
+            IWADsVector[currentRow] == "freedm.wad" ){
+                setDOOM2Options();
         } else {
             ui->groupBox_4->setHidden(true);
         }
     }
 }
 
-void MainWindow::on_pushButton_3_clicked()
+void MainWindow::on_actionSettings_triggered()
 {
-    ui->listWidgetPWAD->clearSelection();
-    ui->listWidgetPWAD->setCurrentRow(-1);
+    cw = new ConfigWindow(config, 0);
+    cw->setWindowModality(Qt::NonModal);
+    cw->exec();
+    delete cw;
+    initWADs();
 }

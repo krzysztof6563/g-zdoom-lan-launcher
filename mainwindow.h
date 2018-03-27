@@ -11,6 +11,9 @@
 #include <vector>
 #include <fstream>
 #include <QCoreApplication>
+#include <QVBoxLayout>
+#include "config.h"
+#include "configwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -28,29 +31,48 @@ private slots:
     void updateError();
     void updateText();
     void processFinished();
+    void cwDestroyed();
 
     void on_radioServer_clicked();
-
     void on_radioClient_clicked();
-
-    void on_pushButton_clicked();
-
-    void on_actionWyjd_triggered();
-
     void on_actionAutor_triggered();
-
-    void on_pushButton_2_clicked();
-
-    void on_listWidget_currentRowChanged(int currentRow);
-
-    void on_pushButton_3_clicked();
+    void on_actionRun_triggered();
+    void on_runButton_clicked();
+    void on_killButton_clicked();
+    void on_actionExit_triggered();
+    void on_refreshButton_clicked();
+    void on_IWADListWidget_currentRowChanged(int currentRow);
+    void on_actionSettings_triggered();
 
 private:
     std::vector<QString> IWADsVector;
     std::vector<QString> PWADsVector;
-    void setWADS();
-    bool run=true;
+    std::vector<QCheckBox*> PWADCheckBoxVector;
+    std::vector<QPushButton> PushButtonsVector;
+
+    QVBoxLayout *PWADvbox;
+
+    Config *config;
+
+    void getWADs();
+    void setIPAdresses();
+    void setPWADs();
+    void setIWADs();
+    void initWADs();
+    void clearWADs();
+    void runGame();
+    void showError(QString title, QString message);
+    void showError(QString message);
+    void setDOOMOptions();
+    void setDOOM2Options();
+    bool setClientOptions(QString &list);
+    void setServerOptions(QString &list);
+    void setCommonOptions(QString &list, QString &program);
+
+    bool run = true;
+    bool showConfigWindow = false;
     QProcess *myProcess = new QProcess();
+    ConfigWindow *cw = nullptr;
 
     Ui::MainWindow *ui;
 };

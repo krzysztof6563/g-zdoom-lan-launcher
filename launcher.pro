@@ -13,11 +13,16 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    configwindow.cpp \
+    config.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    configwindow.h \
+    config.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    configwindow.ui
 
 CONFIG += c++11
 
@@ -27,3 +32,6 @@ RESOURCES += \
 TRANSLATIONS+=  translations/launcher_pl_PL.ts
 
 TRANSLATIONS+=  translations/launcher_en_EN.ts
+
+DISTFILES += \
+    TODO
