@@ -15,14 +15,17 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     configwindow.cpp \
-    config.cpp
+    config.cpp \
+    iwadverwindow.cpp
 
 HEADERS  += mainwindow.h \
     configwindow.h \
-    config.h
+    config.h \
+    iwadverwindow.h
 
 FORMS    += mainwindow.ui \
-    configwindow.ui
+    configwindow.ui \
+    iwadverwindow.ui
 
 CONFIG += c++11
 

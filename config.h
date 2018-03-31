@@ -25,12 +25,16 @@ public:
     QString getBrutalDoomLocation() const;
     void setBrutalDoomLocation(const QString &value);
 
+    int getIWADVer() const;
+    void setIWADVer(int value);
+
 private:
     QString engineLocation;
     QString gameLocation;
     QString brutalDoomLocation;
     QString configName = "launcherConfig.dat";
     QFile *configFile;
+    int IWADVer;
 };
 
 #endif // CONFIG_H

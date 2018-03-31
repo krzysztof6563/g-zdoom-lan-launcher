@@ -17,7 +17,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     config = new Config();
     if (!config->loadConfig()){
-        showError(tr("Błąd ładowania pliku."), tr("Nie udało się odczytać pliku konfiguracyjnego."));
+        if (!config->configExists()) {
+            showError(tr("Błąd ładowania pliku."), tr("Nie znaleziono pliku konfiguracyjnego."));
+            on_actionSettings_triggered();
+        } else {
+            showError(tr("Błąd ładowania pliku."), tr("Nie udało się odczytać pliku konfiguracyjnego."));
+        }
     }
 
     initWADs();
@@ -142,10 +147,12 @@ void MainWindow::setPWADs()
 
 void MainWindow::setIWADs()
 {
+    disconnect(ui->IWADListWidget, SIGNAL(currentRowChanged(int)), this, SLOT(on_IWADListWidget_currentRowChanged(int)));
     ui->IWADListWidget->clear();
     for (auto i : IWADsVector) {
         ui->IWADListWidget->addItem(i);
     }
+    connect(ui->IWADListWidget, SIGNAL(currentRowChanged(int)), this, SLOT(on_IWADListWidget_currentRowChanged(int)));
 }
 
 void MainWindow::initWADs()
@@ -303,6 +310,15 @@ void MainWindow::setCommonOptions(QString &list, QString &program)
     }
 }
 
+void MainWindow::setOptions()
+{
+    if (config->getIWADVer() == 1) {
+        setDOOMOptions();
+    } else {
+        setDOOM2Options();
+    }
+}
+
 void MainWindow::on_actionAutor_triggered()
 {
     QMessageBox msgBox;
@@ -338,21 +354,30 @@ void MainWindow::on_refreshButton_clicked()
 
 void MainWindow::on_IWADListWidget_currentRowChanged(int currentRow)
 {
-    if (IWADsVector[currentRow] == "doom.wad" ||
-        IWADsVector[currentRow] == "heretic.wad"  ){
-            setDOOMOptions();
-    } else {
-        if (IWADsVector[currentRow] == "doom2.wad" ||
-            IWADsVector[currentRow] == "plutonia.wad" ||
-            IWADsVector[currentRow] == "tnt.wad" ||
-            IWADsVector[currentRow] == "hexen.wad" ||
-            IWADsVector[currentRow] == "strife1.wad"  ||
-            IWADsVector[currentRow] == "freedoom1.wad"   ||
-            IWADsVector[currentRow] == "freedoom2.wad"  ||
-            IWADsVector[currentRow] == "freedm.wad" ){
-                setDOOM2Options();
+    if (currentRow > -1){
+        if (IWADsVector[currentRow] == "doom.wad" ||
+            IWADsVector[currentRow] == "heretic.wad"  ){
+                config->setIWADVer(1);
+                setOptions();
         } else {
-            ui->groupBox_4->setHidden(true);
+            if (IWADsVector[currentRow] == "doom2.wad" ||
+                IWADsVector[currentRow] == "plutonia.wad" ||
+                IWADsVector[currentRow] == "tnt.wad" ||
+                IWADsVector[currentRow] == "hexen.wad" ||
+                IWADsVector[currentRow] == "strife1.wad"  ||
+                IWADsVector[currentRow] == "freedoom1.wad"   ||
+                IWADsVector[currentRow] == "freedoom2.wad"  ||
+                IWADsVector[currentRow] == "freedm.wad" ){
+                    config->setIWADVer(2);
+                    setOptions();
+            } else {
+                IWADVerWindow *iwadverwindow = new IWADVerWindow(config, this);
+                iwadverwindow->setWindowTitle("Wersja IWAD");
+                iwadverwindow->setWindowModality(Qt::NonModal);
+                iwadverwindow->exec();
+                delete iwadverwindow;
+                setOptions();
+            }
         }
     }
 }
@@ -361,6 +386,7 @@ void MainWindow::on_actionSettings_triggered()
 {
     cw = new ConfigWindow(config, 0);
     cw->setWindowModality(Qt::NonModal);
+    cw->setWindowTitle("Konfiguracja");
     cw->exec();
     delete cw;
     initWADs();

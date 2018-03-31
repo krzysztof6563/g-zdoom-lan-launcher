@@ -76,3 +76,13 @@ void Config::setBrutalDoomLocation(const QString &value)
 {
     brutalDoomLocation = value;
 }
+
+int Config::getIWADVer() const
+{
+    return IWADVer;
+}
+
+void Config::setIWADVer(int value)
+{
+    IWADVer = value;
+}

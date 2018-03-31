@@ -12,8 +12,11 @@
 #include <fstream>
 #include <QCoreApplication>
 #include <QVBoxLayout>
+#include <QList>
+#include <QListWidgetItem>
 #include "config.h"
 #include "configwindow.h"
+#include "iwadverwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -68,6 +71,7 @@ private:
     bool setClientOptions(QString &list);
     void setServerOptions(QString &list);
     void setCommonOptions(QString &list, QString &program);
+    void setOptions();
 
     bool run = true;
     bool showConfigWindow = false;
