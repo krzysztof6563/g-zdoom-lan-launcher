@@ -409,6 +409,7 @@ void MainWindow::processServerDatagrams()
             qDebug() << "Recived datagram from server";
             qDebug()  << "datagram data: %s %s\n" << datagram.constData() << udpAddress;
             qDebug() << "Adding to list: " << udpAddress;
+
             if (!IPMan->addressExists(ipAddress)) {
                 IPMan->addAddress(ipAddress);
                 QListWidgetItem *item = IPMan->getQListWidgetItemForAddress(ipAddress);
