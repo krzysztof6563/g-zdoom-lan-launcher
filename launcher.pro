@@ -16,12 +16,16 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     configwindow.cpp \
     config.cpp \
-    iwadverwindow.cpp
+    iwadverwindow.cpp \
+    ipmanager.cpp \
+    ipaddress.cpp
 
 HEADERS  += mainwindow.h \
     configwindow.h \
     config.h \
-    iwadverwindow.h
+    iwadverwindow.h \
+    ipmanager.h \
+    ipaddress.h
 
 FORMS    += mainwindow.ui \
     configwindow.ui \

@@ -32,13 +32,20 @@ MainWindow::MainWindow(QWidget *parent) :
 
     setIPAdresses();
 
+    startDiscovery();
+
     this->adjustSize();
 }
 
 MainWindow::~MainWindow()
 {
+    if (ui->radioServer->isChecked()) {
+        sendQuitDatagram();
+    }
     delete config;
     delete ui;
+    delete myProcess;
+    delete IPMan;
 }
 
 void MainWindow::on_radioServer_clicked()
@@ -46,6 +53,8 @@ void MainWindow::on_radioServer_clicked()
     ui->groupOptionsServer->setHidden(false);
     ui->groupOptionsClient->setHidden(true);
     ui->groupBox_3->setHidden(false);
+    this->stopDiscovery();
+    this->startDiscoveryServer();
     this->adjustSize();
 }
 
@@ -54,6 +63,8 @@ void MainWindow::on_radioClient_clicked()
     ui->groupOptionsServer->setHidden(true);
     ui->groupOptionsClient->setHidden(false);
     ui->groupBox_3->setHidden(true);
+    this->stopDiscoveryServer();
+    this->startDiscovery();
     this->adjustSize();
 }
 
@@ -116,8 +127,9 @@ void MainWindow::setIPAdresses()
             if (ip.toStdString().substr(0,3) != "169"){
                 if (i==0){
                     ui->labelIPHost->setText(address.toString());
+                    mainAddress = address.toString();
                     i++;
-                }else{
+                } else {
                     ui->labelIPHost->setText(ui->labelIPHost->text()+"<br>"+address.toString());
                 }
             }
@@ -319,6 +331,100 @@ void MainWindow::setOptions()
     }
 }
 
+void MainWindow::setUpUdpSocket()
+{
+    if (this->udpSocket == nullptr) {
+        qDebug() << "Setting up UDP socket";
+        udpSocket = new QUdpSocket(this);
+        udpSocket->bind(QHostAddress::AnyIPv4, this->serverPort, QUdpSocket::ShareAddress);
+    } else {
+        qDebug() << "UDP socket is already set up";
+    }
+
+}
+
+void MainWindow::startDiscoveryServer(){
+    setUpUdpSocket();
+    qDebug() << "Starting server";
+    connect(udpSocket, SIGNAL(readyRead()), this, SLOT(processClientDatagrams()));
+}
+
+void MainWindow::startDiscovery()
+{
+    setUpUdpSocket();
+    qDebug() << "Starting discovery";
+    connect(udpSocket, SIGNAL(readyRead()), this, SLOT(processServerDatagrams()));
+    sendDiscovery();
+}
+
+void MainWindow::stopDiscoveryServer()
+{
+    sendQuitDatagram();
+    disconnect(udpSocket, SIGNAL(readyRead()), this, SLOT(processClientDatagrams()));
+}
+
+void MainWindow::stopDiscovery()
+{
+    disconnect(udpSocket, SIGNAL(readyRead()), this, SLOT(processServerDatagrams()));
+}
+
+void MainWindow::sendDiscovery()
+{
+    qDebug() << "Sending discovery datagram";
+    udpSocket->writeDatagram(this->datagramRequestIp, QHostAddress::Broadcast, this->serverPort);
+}
+
+void MainWindow::sendQuitDatagram()
+{
+    qDebug() << "Sending quit datagram";
+    udpSocket->writeDatagram(this->datagramQuitting, QHostAddress::Broadcast, this->serverPort);
+}
+
+void MainWindow::processClientDatagrams()
+{
+    QByteArray datagram;
+    while (udpSocket->hasPendingDatagrams()) {
+        datagram.resize(int(udpSocket->pendingDatagramSize()));
+        QHostAddress clientAddress;
+        udpSocket->readDatagram(datagram.data(), datagram.size(), &clientAddress);
+        if (QString::fromUtf8(datagram.constData()) == this->datagramRequestIp) {
+            qDebug() << "Recived datagram from client";
+            printf("datagram data: %s\n", datagram.constData());
+            qDebug() << clientAddress;
+            udpSocket->writeDatagram(this->datagramAddressReplay, clientAddress, this->serverPort);
+        }
+    }
+}
+
+void MainWindow::processServerDatagrams()
+{
+    //add ip addresses manager
+    QByteArray datagram;
+    while (udpSocket->hasPendingDatagrams()) {
+        datagram.resize(int(udpSocket->pendingDatagramSize()));
+        QHostAddress udpAddress;
+        udpSocket->readDatagram(datagram.data(), datagram.size(), &udpAddress);
+        QString ipAddress = udpAddress.toString();
+        if (QString::fromUtf8(datagram.constData()) == this->datagramAddressReplay){
+            qDebug() << "Recived datagram from server";
+            qDebug()  << "datagram data: %s %s\n" << datagram.constData() << udpAddress;
+            qDebug() << "Adding to list: " << udpAddress;
+            if (!IPMan->addressExists(ipAddress)) {
+                IPMan->addAddress(ipAddress);
+                QListWidgetItem *item = IPMan->getQListWidgetItemForAddress(ipAddress);
+                if (item != nullptr){
+                    ui->ServersListWidget->addItem(item);
+                }
+            }
+
+        } else if (QString::fromUtf8(datagram.constData()) == this->datagramQuitting) {
+            IPMan->removeAddress(ipAddress);
+            qDebug() << "Removing item " << udpAddress;
+        }
+    }
+}
+
+
 void MainWindow::on_actionAutor_triggered()
 {
     QMessageBox msgBox;
@@ -390,4 +496,24 @@ void MainWindow::on_actionSettings_triggered()
     cw->exec();
     delete cw;
     initWADs();
+}
+
+void MainWindow::on_actionStart_Discovery_triggered()
+{
+    this->startDiscoveryServer();
+}
+
+void MainWindow::on_actionStart_Broadcast_triggered()
+{
+    this->startDiscovery();
+}
+
+void MainWindow::on_ServersListWidget_itemClicked(QListWidgetItem *item)
+{
+    ui->lineEditIP->setText(item->text());
+}
+
+void MainWindow::on_pushButton_clicked()
+{
+    sendDiscovery();
 }

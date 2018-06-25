@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>744</width>
-    <height>664</height>
+    <height>587</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -210,6 +210,36 @@
            <string>Opcje klienta</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_3">
+           <item>
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>Znalezione serwery:</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QListWidget" name="ServersListWidget">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton">
+             <property name="text">
+              <string>Odśwież</string>
+             </property>
+            </widget>
+           </item>
            <item>
             <widget class="QLabel" name="labelIP">
              <property name="text">
@@ -462,6 +492,16 @@
   <action name="actionSettings">
    <property name="text">
     <string>Ustawienia</string>
+   </property>
+  </action>
+  <action name="actionStart_Discovery">
+   <property name="text">
+    <string>Start Discovery Server</string>
+   </property>
+  </action>
+  <action name="actionStart_Broadcast">
+   <property name="text">
+    <string>Start Broadcast</string>
    </property>
   </action>
  </widget>
